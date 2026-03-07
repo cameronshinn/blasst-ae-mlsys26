@@ -5,6 +5,13 @@ Artifact Evaluation for MLSYS'26
 
 This guide provides steps to reproduce the kernel-level performance benchmarking for the Skip Softmax Attention paper as described in the [TensorRT-LLM Tech Blog](https://nvidia.github.io/TensorRT-LLM/blogs/tech_blog/blog16_Accelerating_Long_Context_Inference_with_Skip_Softmax_Attention.html). It focuses on measuring attention sparsity and throughput across various threshold scale factors.
 
+### 0. Initialize Submodules
+Before proceeding, ensure you have initialized all git submodules to fetch the required TensorRT-LLM source code:
+
+```bash
+git submodule update --init --recursive
+```
+
 ### 1. Launch the Container Environment
 Start the interactive TensorRT-LLM container utilizing either Docker or Singularity (automatically determined based on permissions).
 
@@ -12,8 +19,10 @@ Start the interactive TensorRT-LLM container utilizing either Docker or Singular
 ./start_docker.sh
 ```
 
+If you are using a cloud service that launches a container automatically from an image, you can pull from `nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc6`.
+
 ### 2. Run the Benchmarks
-Inside the container, run the provided benchmarking script (`benchmark_hopper.py`) to automatically sweep through the target sparsity levels. The script operates in two passes: first compiling the kernels with statistics enabled to measure actual sparsity, then recompiling without statistics to measure accurate performance throughput.
+Inside the container, run the provided benchmarking script (`benchmark_hopper.py`) to automatically sweep through the target sparsity levels. The script operates in two passes: first compiling the kernels with statistics enabled to measure actual sparsity, then recompiling without statistics to measure performance accurately.
 
 **Prefill Phase (Batch Size = 1):**
 ```bash
