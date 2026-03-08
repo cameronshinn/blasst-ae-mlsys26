@@ -130,21 +130,21 @@ if __name__ == "__main__":
         factors_to_test = [
             None,    # Baseline (0%)
             10000,   #  0.00% sparsity
-            # 30000,   #  5.70% sparsity
-            # 35000,   # 10.23% sparsity
-            # 40000,   # 23.78% sparsity
-            # 45000,   # 32.07% sparsity
-            # 50000,   # 40.72% sparsity
+            30000,   #  5.70% sparsity
+            35000,   # 10.23% sparsity
+            40000,   # 23.78% sparsity
+            45000,   # 32.07% sparsity
+            50000,   # 40.72% sparsity
             53000,   # 49.24% sparsity
-            # 55000,   # 57.27% sparsity
-            # 60000,   # 64.56% sparsity
-            # 75000,   # 75.80% sparsity
-            # 100000,  # 84.85% sparsity
+            55000,   # 57.27% sparsity
+            60000,   # 64.56% sparsity
+            75000,   # 75.80% sparsity
+            100000,  # 84.85% sparsity
             # 120000,  # 88.45% sparsity
             130000,  # 89.84% sparsity
-            # 150000,  # 92.06% sparsity
-            # 200000,  # 94.47% sparsity
-            # 1000000  # 99.42% sparsity
+            150000,  # 92.06% sparsity
+            200000,  # 94.47% sparsity
+            1000000  # 99.42% sparsity
         ]
         seq_len_q_arg = None
         batch_size_arg = 1
