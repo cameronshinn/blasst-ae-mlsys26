@@ -1,2 +1,6 @@
-# blasst-ae-mlsys26
-Artifact Evaluation for MLSYS'26
+# BLASST Artifact Evaluation for MLSys 2026
+
+Clone with external subodules
+```
+git clone git@github.com:cameronshinn/blasst-ae-mlsys26.git --recursive
+```
