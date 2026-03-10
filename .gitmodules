@@ -1,3 +1,6 @@
 [submodule "TensorRT-LLM"]
 	path = TensorRT-LLM
 	url = https://github.com/NVIDIA/TensorRT-LLM.git
+[submodule "flashinfer"]
+	path = flashinfer
+	url = git@github.com:cameronshinn/flashinfer.git
