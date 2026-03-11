@@ -1,6 +1,9 @@
-[submodule "TensorRT-LLM"]
-	path = external/TensorRT-LLM
-	url = https://github.com/NVIDIA/TensorRT-LLM.git
 [submodule "flashinfer"]
 	path = external/flashinfer
 	url = git@github.com:cameronshinn/flashinfer.git
+[submodule "hopper_decode/TensorRT-LLM"]
+	path = hopper_decode/TensorRT-LLM
+	url = https://github.com/pengbowang-nv/TensorRT-LLM
+[submodule "hopper_prefill/TensorRT-LLM"]
+	path = hopper_prefill/TensorRT-LLM
+	url = https://github.com/NVIDIA/TensorRT-LLM.git
