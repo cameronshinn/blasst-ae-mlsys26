@@ -1,5 +1,5 @@
 [submodule "flashinfer"]
-	path = external/flashinfer
+	path = blackwell_prefill/flashinfer
 	url = git@github.com:cameronshinn/flashinfer.git
 [submodule "hopper_decode/TensorRT-LLM"]
 	path = hopper_decode/TensorRT-LLM
