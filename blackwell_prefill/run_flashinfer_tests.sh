@@ -22,4 +22,4 @@ export FLASHINFER_WORKSPACE_BASE="$PWD"
 
 # Run pytest on the specified file, passing along any extra arguments provided
 # The skips_softmax parameter is the first one in the list, so True appears as "[True-"
-python3 -m pytest -s tests/attention/test_trtllm_gen_attention.py -k "[True-" "$@"
+python3 -m pytest -s tests/attention/test_trtllm_gen_attention.py::test_trtllm_batch_prefill_skip_stats
