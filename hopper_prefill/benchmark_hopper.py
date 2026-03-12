@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     print(f"\n{'#' * 120}")
     print("# skipSoftmaxAttention Hopper Performance Data")
-    print("# Tracking TFLOPS instead of Bandwidth for Prefill")
+    print("# Theoretical throughput 1979/3958 TFLOPS BF16/FP8 ")
     print(f"{'#' * 120}")
 
     for seq in [16384, 65536]:
