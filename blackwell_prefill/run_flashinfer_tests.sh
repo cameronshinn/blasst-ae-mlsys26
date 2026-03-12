@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 echo "Running flashinfer tests..."
 
-cd external/flashinfer
+cd flashinfer
 
 # We must ensure that we use the local flashinfer rather than any pre-installed container version
 python3 -m pip uninstall -y flashinfer --break-system-packages || true
