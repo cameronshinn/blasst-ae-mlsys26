@@ -20,7 +20,12 @@ Start the interactive TensorRT-LLM container utilizing either Docker or Singular
 
 If you are using a cloud service that launches a container automatically from an image, you can pull from `nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc6`.
 
-### 2. Run the Benchmarks
+### 2. Permissions during Build (Optional)
+
+> [!NOTE]
+> If you run into permission issues while building the performance kernels regarding the `ccache` or system temp directory, you can go into `hopper_prefill/build_hopper.sh` and uncomment `CCACHE_DIR="/workspace/.ccache"` and `TMPDIR="/workspace/tmp"` to localize those directories to your mounted workspace.
+
+### 3. Run the Benchmarks
 Inside the container, run the provided benchmarking script (`benchmark_hopper.py`) to automatically sweep through the target sparsity levels. The script operates in two passes: first compiling the kernels with statistics enabled to measure actual sparsity, then recompiling without statistics to measure performance accurately.
 
 **Prefill Phase:**

@@ -18,6 +18,9 @@ export USE_CCACHE=1
 if [[ "$1" == "--skip-softmax-stat" ]]; then
     export CXXFLAGS="-DSKIP_SOFTMAX_STAT"
     export CUDAFLAGS="-DSKIP_SOFTMAX_STAT"
+else
+    unset CXXFLAGS
+    unset CUDAFLAGS
 fi
 mkdir -p "$TMPDIR"
 make clean

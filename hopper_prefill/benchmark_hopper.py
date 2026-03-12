@@ -128,23 +128,43 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark Hopper FMHA kernels with Skip-Softmax.")
     args = parser.parse_args()
 
+    # factors_to_test = [
+    #     0,       # Baseline (0%)
+    #     10000,   #  0.00% sparsity
+    #     # 30000,   #  5.70% sparsity
+    #     # 35000,   # 10.23% sparsity
+    #     40000,   # 23.78% sparsity
+    #     # 45000,   # 32.07% sparsity
+    #     # 50000,   # 40.72% sparsity
+    #     53000,   # 49.24% sparsity
+    #     # 55000,   # 57.27% sparsity
+    #     # 60000,   # 64.56% sparsity
+    #     75000,   # 75.80% sparsity
+    #     # 100000,  # 84.85% sparsity
+    #     # 130000,  # 89.84% sparsity
+    #     150000,  # 92.06% sparsity
+    #     # 200000,  # 94.47% sparsity
+    #     1000000  # 99.42% sparsity
+    # ]
+
     factors_to_test = [
-        0,       # Baseline (0%)
-        10000,   #  0.00% sparsity
-        30000,   #  5.70% sparsity
-        35000,   # 10.23% sparsity
-        40000,   # 23.78% sparsity
-        45000,   # 32.07% sparsity
-        50000,   # 40.72% sparsity
-        53000,   # 49.24% sparsity
-        55000,   # 57.27% sparsity
-        60000,   # 64.56% sparsity
-        75000,   # 75.80% sparsity
-        100000,  # 84.85% sparsity
-        130000,  # 89.84% sparsity
-        150000,  # 92.06% sparsity
-        200000,  # 94.47% sparsity
-        1000000  # 99.42% sparsity
+        0,
+        0.5,
+        0.6,
+        0.8,
+        0.9,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.5,
+        1.75,
+        2.0,
+        2.25,
+        2.5,
+        3.0,
+        4.0,
+        5.0
     ]
     seq_len_q_arg = None
     batch_size_arg = 1
@@ -173,7 +193,7 @@ if __name__ == "__main__":
                         seq_len=seq,
                         repeats=1,
                         warmup_repeats=0,
-                        skip_softmax_scale_factor=factor,
+                        skip_softmax_scale_factor=factor * seq,
                         seq_len_q=seq_len_q_arg
                     )
                 final_results[(factor, seq, dtype)]["sparsity"] = sparsity
@@ -193,7 +213,7 @@ if __name__ == "__main__":
                         seq_len=seq,
                         repeats=10,
                         warmup_repeats=3,
-                        skip_softmax_scale_factor=factor,
+                        skip_softmax_scale_factor=factor * seq,
                         seq_len_q=seq_len_q_arg
                     )
                 if time_us is not None:
@@ -243,6 +263,6 @@ if __name__ == "__main__":
 
             bf16_time = bf16_metrics["time"] / 1000.0 if bf16_metrics["time"] else None
 
-            bf16_col = fmt_row(f"{factor / 100000.0:.3f}", bf16_metrics["sparsity"] or 0.0, bf16_time, bf16_base_ms, bf16_metrics["bw"] or 0.0)
+            bf16_col = fmt_row(f"{factor:.3f}", bf16_metrics["sparsity"] or 0.0, bf16_time, bf16_base_ms, bf16_metrics["bw"] or 0.0)
 
             print(f"   {bf16_col}")
