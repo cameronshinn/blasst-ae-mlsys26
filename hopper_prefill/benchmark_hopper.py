@@ -129,7 +129,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     factors_to_test = [
-        None,    # Baseline (0%)
+        0,       # Baseline (0%)
         10000,   #  0.00% sparsity
         30000,   #  5.70% sparsity
         35000,   # 10.23% sparsity
@@ -141,7 +141,6 @@ if __name__ == "__main__":
         60000,   # 64.56% sparsity
         75000,   # 75.80% sparsity
         100000,  # 84.85% sparsity
-        # 120000,  # 88.45% sparsity
         130000,  # 89.84% sparsity
         150000,  # 92.06% sparsity
         200000,  # 94.47% sparsity
@@ -160,7 +159,7 @@ if __name__ == "__main__":
     for seq in [16384, 65536]:
         for dtype in ["-bf16"]:
             for factor in factors_to_test:
-                if factor is None:
+                if factor == 0:
                     final_results[(factor, seq, dtype)]["sparsity"] = 0.0
                     continue
 
@@ -203,7 +202,6 @@ if __name__ == "__main__":
 
     print(f"\n{'#' * 120}")
     print("# skipSoftmaxAttention Hopper Performance Data")
-    print("# Theoretical throughput 1979/3958 TFLOPS BF16/FP8 ")
     print(f"{'#' * 120}")
 
     for seq in [16384, 65536]:
@@ -222,7 +220,7 @@ if __name__ == "__main__":
         print("-" * 120)
 
         def get_baseline_time(dtype):
-            return final_results.get((None, seq, dtype), {}).get("time")
+            return final_results.get((0, seq, dtype), {}).get("time")
 
         bf16_base_ms = get_baseline_time("-bf16") / 1000.0 if get_baseline_time("-bf16") else None
 
@@ -233,13 +231,13 @@ if __name__ == "__main__":
             return f"{threshold_str:>10} {sparsity:>10.2f}% {time_ms:>9.3f} {bw:>10.3f} {speedup:>8.3f}"
 
         # Baseline rows (no-skip kernel)
-        bf16_base_bw = final_results[(None, seq, "-bf16")]["bw"]
+        bf16_base_bw = final_results[(0, seq, "-bf16")]["bw"]
 
         bf16_base_row = fmt_row("0(NoSkip)", 0.0, bf16_base_ms, bf16_base_ms, bf16_base_bw) if bf16_base_ms else " " * 55
         print(f"   {bf16_base_row}")
 
         for factor in factors_to_test:
-            if factor is None: continue
+            if factor == 0: continue
 
             bf16_metrics = final_results[(factor, seq, "-bf16")]
 

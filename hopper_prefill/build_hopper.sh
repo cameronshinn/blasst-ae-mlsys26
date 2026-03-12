@@ -13,8 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 pushd "${SCRIPT_DIR}/TensorRT-LLM/cpp/kernels/fmha_v2/" > /dev/null || exit 1
 
 export USE_CCACHE=1
-export CCACHE_DIR="/workspace/.ccache"
-export TMPDIR="/workspace/tmp"
+# export CCACHE_DIR="/workspace/.ccache"
+# export TMPDIR="/workspace/tmp"
 if [[ "$1" == "--skip-softmax-stat" ]]; then
     export CXXFLAGS="-DSKIP_SOFTMAX_STAT"
     export CUDAFLAGS="-DSKIP_SOFTMAX_STAT"
