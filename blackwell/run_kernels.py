@@ -131,7 +131,7 @@ def create_workspace_buffer():
         global_workspace_buffer = torch.empty(workspace_size, dtype=torch.int8, device=GPU_DEVICE)
     return global_workspace_buffer
 
-def bench_trtllm_skip_stats(
+def bench_trtllm_prefill(
     batch_size,
     max_q_len,
     max_kv_len,
@@ -336,16 +336,6 @@ def bench_trtllm_decode(
 
     return ms, tflops, sparsity
 
-def reorder_csv_columns(csv_path):
-    df = pd.read_csv(csv_path)
-    # Move Mode and BatchSize to the front
-    cols = list(df.columns)
-    for col in ["Mode", "BatchSize"]:
-        if col in cols:
-            cols.remove(col)
-    new_order = ["Mode", "BatchSize"] + cols
-    df = df[new_order]
-    df.to_csv(csv_path, index=False)
 
 if __name__ == "__main__":
     compute_capability = get_compute_capability(torch.device("cuda"))
@@ -356,14 +346,9 @@ if __name__ == "__main__":
     # Results collection
     results = []
 
-    thresholds = [0, 0.5, 0.6, 0.8, 0.9, 1.0, 1.05, 1.1, 1.2, 1.5, 1.75, 2.0, 2.25, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
+    thresholds = [0, 0.5, 0.6, 0.8, 0.9, 1.0, 1.05, 1.1, 1.2, 1.5, 1.75, 2.0, 2.25, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 100.0]
     seq_lens_to_bench = [16384, 65536]
 
-    # Print header if enabled
-    if args.print_results:
-        print(f"Configuration: BS={args.batch_size}, heads={args.num_kv_heads}x{args.head_grp_size}, dim={args.head_dim}, page={args.page_size}, layout={args.kv_layout}, dtype={args.q_dtype}")
-        print(f"{'SeqLen':>8} | {'Threshold':>10} | {'Time (ms)':>10} | {'TFLOPS':>10} | {'Sparsity':>10} | {'BatchSize':>8} | {'Mode':>8}")
-        print("-" * 110)
 
     decode_batch_size = 64
     prefill_batch_size = 1
@@ -386,10 +371,37 @@ if __name__ == "__main__":
     ]
 
     for mode, batch_size, seq_len in configs:
+        if args.print_results:
+            print("\n" + "="*100)
+            print(f"{mode.capitalize()} phase    BS={batch_size}    dH={head_dim}    num_q_heads={num_qo_heads}    num_kv_heads={num_kv_heads}")
+            print(f"seqlen = {seq_len}    dtype = {q_dtype}    layout = {kv_layout}")
+            print("="*100)
+            print(f"{'Threshold':>10} | {'Sparsity':>12} | {'Time (ms)':>10} | {'TFLOPS':>10} | {'Baseline':>10} | {'Speedup':>10}")
+            print("-" * 105)
+        baseline_ms = None
+        if args.run_mode != "stats":
+            # Collect true baseline (skips_softmax=False)
+            if mode == "prefill":
+                baseline_ms, _, _ = bench_trtllm_prefill(
+                    batch_size, seq_len, 0, num_kv_heads, head_grp_size,
+                    head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
+                    skips_softmax=False,
+                    warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
+                )
+            # elif mode == "decode":
+            #     baseline_ms, _, _ = bench_trtllm_decode(
+            #         batch_size, seq_len, num_kv_heads, head_grp_size,
+            #         head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
+            #         skips_softmax=False,
+            #         warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
+            #     )
+
+        baseline_ms_str = f"{baseline_ms:10.3f}".strip() if baseline_ms is not None else ""
+
         for threshold in thresholds:
             actual_threshold = max(threshold * seq_len, 1e-30)
             if mode == "prefill":
-                ms, tflops, sparsity = bench_trtllm_skip_stats(
+                ms, tflops, sparsity = bench_trtllm_prefill(
                     batch_size, seq_len, 0, num_kv_heads, head_grp_size,
                     head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
                     skips_softmax=True, skip_threshold=actual_threshold,
@@ -402,19 +414,25 @@ if __name__ == "__main__":
             #         skips_softmax=True, skip_threshold=actual_threshold,
             #         warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
             #     )
-            sparsity_str = f"{sparsity:10.4f}".strip() if sparsity is not None else ""
+            sparsity_str = f"{sparsity*100:10.2f}%".strip() if sparsity is not None else ""
             ms_str = f"{ms:10.3f}".strip() if ms is not None else ""
             tflops_str = f"{tflops:10.2f}".strip() if tflops is not None else ""
+            if baseline_ms and ms:
+                speedup = baseline_ms / ms
+                speedup_str = f"{speedup:10.3f}".strip()
+            else:
+                speedup_str = ""
+
             if args.print_results:
-                print(f"{mode:>8} | {batch_size:>8} | {seq_len:>8} | {threshold:>10.3f} | {ms_str} | {tflops_str} | {sparsity_str}")
-            results.append((mode, batch_size, seq_len, threshold, ms_str, tflops_str, sparsity_str))
+                print(f"{threshold:>10.3f} | {sparsity_str:>12} | {ms_str:>10} | {tflops_str:>10} | {baseline_ms_str:>10} | {speedup_str:>10}")
+            results.append((mode, batch_size, seq_len, threshold, sparsity_str, ms_str, tflops_str, baseline_ms_str, speedup_str))
 
     # Write results to CSV
     csv_path = f"{'stats_results.csv' if args.run_mode == 'stats' else 'perf_results.csv'}"
     with open(csv_path, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["Mode", "BatchSize", "SeqLen", "Threshold", "Time (ms)", "TFLOPS", "Sparsity"])
+        writer.writerow(["Mode", "BatchSize", "SeqLen", "Threshold", "Sparsity", "Time (ms)", "TFLOPS", "Baseline Time (ms)", "Speedup"])
         for row in results:
             writer.writerow(row)
-    reorder_csv_columns(csv_path)
+
     print(f"Results written to {csv_path}")
