@@ -159,6 +159,7 @@ def bench_trtllm_prefill(
     kv_indptr = generate_cumsum_lens(page_per_seq)
 
     workspace_buffer = create_workspace_buffer()
+    workspace_buffer.zero_()
 
     sm_scale = float(1.0 / (head_dim**0.5))
     bmm1_scale = q_scale * k_scale * sm_scale
@@ -244,6 +245,7 @@ def bench_trtllm_decode(
     kv_indptr = generate_cumsum_lens(page_per_seq)
 
     workspace_buffer = create_workspace_buffer()
+    workspace_buffer.zero_()
 
     sm_scale = float(1.0 / (head_dim**0.5))
     bmm1_scale = q_scale * k_scale * sm_scale
@@ -252,62 +254,8 @@ def bench_trtllm_decode(
     skip_softmax_threshold_scale_factor = skip_threshold if skips_softmax else None
     skip_softmax_stats_buffer = torch.zeros(4, device=GPU_DEVICE, dtype=torch.int32)
 
-    # Warmup
     if args.run_mode == "stats":
-        flashinfer.decode.trtllm_batch_decode_with_kv_cache(
-            q,
-            kv_cache,
-            workspace_buffer,
-            page_table,
-            seq_lens.to(GPU_DEVICE),
-            torch.max(seq_lens).item(),
-            bmm1_scale,
-            bmm2_scale,
-            window_left,
-            kv_layout=kv_layout,
-            backend="trtllm-gen",
-            skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
-            skip_softmax_stats_buffer=skip_softmax_stats_buffer,
-        )
-    else:
-        flashinfer.decode.trtllm_batch_decode_with_kv_cache(
-            q,
-            kv_cache,
-            workspace_buffer,
-            page_table,
-            seq_lens.to(GPU_DEVICE),
-            torch.max(seq_lens).item(),
-            bmm1_scale,
-            bmm2_scale,
-            window_left,
-            kv_layout=kv_layout,
-            backend="trtllm-gen",
-            skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
-        )
-
-    # Measure time
-    measurements = bench_gpu_time(
-        lambda: flashinfer.decode.trtllm_batch_decode_with_kv_cache(
-            q,
-            kv_cache,
-            workspace_buffer,
-            page_table,
-            seq_lens.to(GPU_DEVICE),
-            torch.max(seq_lens).item(),
-            bmm1_scale,
-            bmm2_scale,
-            window_left,
-            kv_layout=kv_layout,
-            backend="trtllm-gen",
-            skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
-        ),
-        dry_run_iters=warmup_iters,
-        repeat_iters=repeat_iters,
-    )
-    ms = np.median(measurements)
-
-    # Collect stats
-    if args.run_mode == "stats":
+        # Collect stats
         skip_softmax_stats_buffer.zero_()
         flashinfer.decode.trtllm_batch_decode_with_kv_cache(
             q,
@@ -321,18 +269,62 @@ def bench_trtllm_decode(
             window_left,
             kv_layout=kv_layout,
             backend="trtllm-gen",
+            max_q_len=1,
+            cum_seq_lens_q=q_indptr,
             skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
             skip_softmax_stats_buffer=skip_softmax_stats_buffer,
         )
         stats = skip_softmax_stats_buffer.cpu().numpy()
         sparsity = stats[2] / stats[3] if stats[3] > 0 else 0
+        ms = None
+        tflops = None
     else:
+        # Warmup
+        flashinfer.decode.trtllm_batch_decode_with_kv_cache(
+            q,
+            kv_cache,
+            workspace_buffer,
+            page_table,
+            seq_lens.to(GPU_DEVICE),
+            torch.max(seq_lens).item(),
+            bmm1_scale,
+            bmm2_scale,
+            window_left,
+            kv_layout=kv_layout,
+            backend="trtllm-gen",
+            max_q_len=1,
+            cum_seq_lens_q=q_indptr,
+            skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
+        )
+
+        # Measure time
+        measurements = bench_gpu_time(
+            lambda: flashinfer.decode.trtllm_batch_decode_with_kv_cache(
+                q,
+                kv_cache,
+                workspace_buffer,
+                page_table,
+                seq_lens.to(GPU_DEVICE),
+                torch.max(seq_lens).item(),
+                bmm1_scale,
+                bmm2_scale,
+                window_left,
+                kv_layout=kv_layout,
+                backend="trtllm-gen",
+                max_q_len=1,
+                cum_seq_lens_q=q_indptr,
+                skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
+            ),
+            dry_run_iters=warmup_iters,
+            repeat_iters=repeat_iters,
+        )
+        ms = np.median(measurements)
         sparsity = None
 
-    # TFLOPS
-    tflops = attention_tflops_per_sec_with_actual_seq_lens(
-        q_lens, seq_lens, head_dim, head_dim, num_qo_heads, True, ms
-    )
+        # TFLOPS
+        tflops = attention_tflops_per_sec_with_actual_seq_lens(
+            q_lens, seq_lens, head_dim, head_dim, num_qo_heads, True, ms
+        )
 
     return ms, tflops, sparsity
 
@@ -366,8 +358,8 @@ if __name__ == "__main__":
     configs = [
         ("prefill", prefill_batch_size, 16384),
         ("prefill", prefill_batch_size, 65536),
-        # ("decode", decode_batch_size, 16384),
-        # ("decode", decode_batch_size, 65536),
+        ("decode", decode_batch_size, 16384),
+        ("decode", decode_batch_size, 65536),
     ]
 
     for mode, batch_size, seq_len in configs:
@@ -388,13 +380,13 @@ if __name__ == "__main__":
                     skips_softmax=False,
                     warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
                 )
-            # elif mode == "decode":
-            #     baseline_ms, _, _ = bench_trtllm_decode(
-            #         batch_size, seq_len, num_kv_heads, head_grp_size,
-            #         head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
-            #         skips_softmax=False,
-            #         warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
-            #     )
+            elif mode == "decode":
+                baseline_ms, _, _ = bench_trtllm_decode(
+                    batch_size, seq_len, num_kv_heads, head_grp_size,
+                    head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
+                    skips_softmax=False,
+                    warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
+                )
 
         baseline_ms_str = f"{baseline_ms:10.3f}".strip() if baseline_ms is not None else ""
 
@@ -407,13 +399,13 @@ if __name__ == "__main__":
                     skips_softmax=True, skip_threshold=actual_threshold,
                     warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
                 )
-            # elif mode == "decode":
-            #     ms, tflops, sparsity = bench_trtllm_decode(
-            #         batch_size, seq_len, num_kv_heads, head_grp_size,
-            #         head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
-            #         skips_softmax=True, skip_threshold=actual_threshold,
-            #         warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
-            #     )
+            elif mode == "decode":
+                ms, tflops, sparsity = bench_trtllm_decode(
+                    batch_size, seq_len, num_kv_heads, head_grp_size,
+                    head_dim, page_size, q_dtype, kv_dtype, kv_layout, window_left,
+                    skips_softmax=True, skip_threshold=actual_threshold,
+                    warmup_iters=args.warmup_iters, repeat_iters=args.repeat_iters
+                )
             sparsity_str = f"{sparsity*100:10.2f}%".strip() if sparsity is not None else ""
             ms_str = f"{ms:10.3f}".strip() if ms is not None else ""
             tflops_str = f"{tflops:10.2f}".strip() if tflops is not None else ""
