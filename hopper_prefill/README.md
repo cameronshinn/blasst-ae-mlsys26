@@ -1,41 +1,65 @@
-# Collecting Hopper Performance
+# Hopper Prefill Performance Numbers
 
-## Reproducing Skip Softmax Attention Performance (Hopper FMHA Kernels)
+## Quick Start
 
-This guide provides steps to reproduce the kernel-level performance benchmarking for the Skip Softmax Attention paper as described in the [TensorRT-LLM Tech Blog](https://nvidia.github.io/TensorRT-LLM/blogs/tech_blog/blog16_Accelerating_Long_Context_Inference_with_Skip_Softmax_Attention.html). It focuses on measuring attention sparsity and throughput across various threshold scale factors.
-
-### 0. Initialize Submodules
-Before proceeding, ensure you have initialized all git submodules to fetch the required TensorRT-LLM source code:
-
-```bash
-git submodule update --init --recursive
+```
+python benchmark_hopper.py
 ```
 
-### 1. Launch the Container Environment
-Start the interactive TensorRT-LLM container utilizing either Docker or Singularity (automatically determined based on permissions).
+## Expected Results
 
-```bash
-./../start_docker.sh
 ```
+########################################################################################################################
+# skipSoftmaxAttention Hopper Performance Data
+########################################################################################################################
 
-If you are using a cloud service that launches a container automatically from an image, you can pull from `nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc6`.
+========================================================================================================================
+Prefill phase    BS=1    dH=128        num q heads 64    num kv heads 4
+seqlen = 16k
+========================================================================================================================
+                                        BF16
+    threshold  sparsity %   time/ms    TFLOP/s  Speedup
+------------------------------------------------------------------------------------------------------------------------
+    0(NoSkip)       0.00%    14.029    626.990    1.000
+        0.500       0.25%    15.261    576.380    0.919
+        0.600       2.11%    15.179    579.490    0.924
+        0.800      13.89%    14.306    614.870    0.981
+        0.900      20.68%    13.797    637.510    1.017
+        1.000      28.47%    13.116    670.630    1.070
+        1.050      36.75%    12.475    705.120    1.125
+        1.100      44.49%    11.916    738.180    1.177
+        1.200      51.39%    11.370    773.640    1.234
+        1.500      62.71%    10.431    843.300    1.345
+        1.750      71.23%     9.730    904.000    1.442
+        2.000      74.67%     9.419    933.840    1.489
+        2.250      80.32%     8.984    979.130    1.562
+        2.500      82.64%     8.799    999.700    1.594
+        3.000      86.50%     8.499   1034.970    1.651
+        4.000      90.78%     8.285   1061.700    1.693
+        5.000      93.69%     8.170   1076.630    1.717
 
-### 2. Permissions during Build (Optional)
-
-> [!NOTE]
-> If you run into permission issues while building the performance kernels regarding the `ccache` or system temp directory, you can go into `hopper_prefill/build_hopper.sh` and uncomment `CCACHE_DIR="/workspace/.ccache"` and `TMPDIR="/workspace/tmp"` to localize those directories to your mounted workspace.
-
-### 3. Run the Benchmarks
-Inside the container, run the provided benchmarking script (`benchmark_hopper.py`) to automatically sweep through the target sparsity levels. The script operates in two passes: first compiling the kernels with statistics enabled to measure actual sparsity, then recompiling without statistics to measure performance accurately.
-
-**Prefill Phase:**
-```bash
-python3 benchmark_hopper.py --mode prefill
+========================================================================================================================
+Prefill phase    BS=1    dH=128        num q heads 64    num kv heads 4
+seqlen = 64k
+========================================================================================================================
+                                        BF16
+    threshold  sparsity %   time/ms    TFLOP/s  Speedup
+------------------------------------------------------------------------------------------------------------------------
+    0(NoSkip)       0.00%   226.371    621.710    1.000
+        0.500      10.23%   234.891    599.160    0.964
+        0.600      23.78%   217.560    646.890    1.040
+        0.800      49.24%   185.137    760.180    1.223
+        0.900      57.27%   174.456    806.720    1.298
+        1.000      64.56%   164.684    854.590    1.375
+        1.050      70.97%   156.194    901.040    1.449
+        1.100      75.80%   149.838    939.270    1.511
+        1.200      79.52%   144.912    971.200    1.562
+        1.500      84.85%   138.043   1019.520    1.640
+        1.750      88.45%   133.647   1053.050    1.694
+        2.000      89.84%   131.919   1066.850    1.716
+        2.250      92.06%   129.119   1089.980    1.753
+        2.500      92.96%   128.499   1095.250    1.762
+        3.000      94.47%   127.056   1107.680    1.782
+        4.000      96.19%   125.730   1119.360    1.800
+        5.000      97.40%   125.000   1125.900    1.811
 ```
-
-**Decode Phase:**
-```bash
-python3 benchmark_hopper.py --mode decode
-```
-
-The script will output a tabular summary of the threshold, measured sparsity percentage, fused time execution (in microseconds), and the overall speedup compared to the baseline dense attention kernel.

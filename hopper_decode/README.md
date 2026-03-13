@@ -1,11 +1,4 @@
-# Reproduce: skipSoftmaxAttention Performance Benchmark
-
-## Prerequisites
-
-<!-- - H200 GPU (SM90a)
-- CUDA toolkit with nvcc supporting sm_90a
-- CMake 3.18+
-- Python 3 -->
+# Hopper Decode Performance Numbers
 
 ## Quick Start
 
