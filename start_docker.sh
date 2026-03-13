@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-IMAGE="nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc3"
+IMAGE="nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc6"
 WORKSPACE_DIR="$(pwd)"
 
 echo "Launching Docker container with image: $IMAGE"
