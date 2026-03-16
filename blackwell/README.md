@@ -8,6 +8,9 @@ python run_stats_and_perf.py
 
 ## Expected Results
 
+> [!NOTE]
+> There is currently a segfault with the prefill sparsity collection pass that is bugged, we hardcode it to 0% for now.
+
 ```
 ====================================================================================================
 Decode phase    BS=64    dH=128    num_q_heads=64    num_kv_heads=4
