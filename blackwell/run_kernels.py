@@ -257,25 +257,26 @@ def bench_trtllm_decode(
     if args.run_mode == "stats":
         # Collect stats
         skip_softmax_stats_buffer.zero_()
-        flashinfer.decode.trtllm_batch_decode_with_kv_cache(
-            q,
-            kv_cache,
-            workspace_buffer,
-            page_table,
-            seq_lens.to(GPU_DEVICE),
-            torch.max(seq_lens).item(),
-            bmm1_scale,
-            bmm2_scale,
-            window_left,
-            kv_layout=kv_layout,
-            backend="trtllm-gen",
-            max_q_len=1,
-            cum_seq_lens_q=q_indptr,
-            skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
-            skip_softmax_stats_buffer=skip_softmax_stats_buffer,
-        )
-        stats = skip_softmax_stats_buffer.cpu().numpy()
-        sparsity = stats[2] / stats[3] if stats[3] > 0 else 0
+        # flashinfer.decode.trtllm_batch_decode_with_kv_cache(
+        #     q,
+        #     kv_cache,
+        #     workspace_buffer,
+        #     page_table,
+        #     seq_lens.to(GPU_DEVICE),
+        #     torch.max(seq_lens).item(),
+        #     bmm1_scale,
+        #     bmm2_scale,
+        #     window_left,
+        #     kv_layout=kv_layout,
+        #     backend="trtllm-gen",
+        #     max_q_len=1,
+        #     cum_seq_lens_q=q_indptr,
+        #     skip_softmax_threshold_scale_factor=skip_softmax_threshold_scale_factor,
+        #     skip_softmax_stats_buffer=skip_softmax_stats_buffer,
+        # )
+        # stats = skip_softmax_stats_buffer.cpu().numpy()
+        # sparsity = stats[2] / stats[3] if stats[3] > 0 else 0
+        sparsity = 0
         ms = None
         tflops = None
     else:
